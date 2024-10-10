@@ -8,61 +8,103 @@ const path = require('path');
 
 class WhatsappController {
     constructor() {
+        // Initialize the client
         this.client = new Client({
-            session: this.loadSession(), // Charger la session si elle existe
+            session: this.loadSession(), // Load the session if it exists
         });
 
-        // Handle QR code generation
+        // Log when the client initializes
+        console.log('WhatsApp client initializing...');
+
+        // QR Code generation event
         this.client.on('qr', (qr) => {
             QRCode.toDataURL(qr, (err, url) => {
                 if (err) {
                     console.error('Error generating QR code:', err);
                 } else {
-                    console.log('QR Code generated:', url);
-                    // Envoie l'URL du QR code ici si nécessaire
+                    console.log('QR Code generated. Scan this QR code:', url);
                 }
             });
         });
 
-        // Handle successful authentication
+        // Client ready event
         this.client.on('ready', async () => {
             console.log('WhatsApp client is ready!');
-            await this.registerInstance();
         });
 
-        // Save session on authentication
+        // Client authenticated event
         this.client.on('authenticated', (session) => {
+            console.log('Client authenticated.');
             this.saveSession(session);
+
+            // Create the instance and generate access token after authentication
+            this.registerInstance();
+        });
+
+        // Handle authentication failure
+        this.client.on('auth_failure', (msg) => {
+            console.error('Authentication failure:', msg);
+        });
+
+        // Handle client disconnection
+        this.client.on('disconnected', (reason) => {
+            console.error('WhatsApp client disconnected:', reason);
+        });
+
+        // Error handling
+        this.client.on('error', (err) => {
+            console.error('Client error:', err);
         });
 
         // Start the client
-        this.client.initialize();
+        this.client.initialize().then(() => {
+            console.log('WhatsApp client initialized.');
+        }).catch((error) => {
+            console.error('Error initializing WhatsApp client:', error);
+        });
     }
 
     loadSession() {
         const sessionPath = path.join(__dirname, '../session.json');
         if (fs.existsSync(sessionPath)) {
+            console.log('Session file found, loading session...');
             return JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
         }
-        return null; // Pas de session existante
+        console.log('No session file found.');
+        return null; // No existing session
     }
 
     saveSession(session) {
         const sessionPath = path.join(__dirname, '../session.json');
-        fs.writeFileSync(sessionPath, JSON.stringify(session));
+        console.log('Saving session at:', sessionPath); // Debugging path
+
+        try {
+            fs.writeFileSync(sessionPath, JSON.stringify(session));
+            console.log('Session saved successfully.');
+            
+            // Read the file immediately to verify
+            const savedSession = fs.readFileSync(sessionPath, 'utf8');
+            console.log('Session file content:', savedSession);
+        } catch (error) {
+            console.error('Error saving session:', error);
+        }
     }
 
     async registerInstance() {
-        const userId = `user_${uuidv4()}`; // Exemple : Utiliser un UUID pour un ID unique
-        const accessToken = crypto.randomBytes(32).toString('hex'); // Générer le token
+        const userId = `user_${uuidv4()}`; //Generate a unique user ID
+        const accessToken = crypto.randomBytes(32).toString('hex'); // Generate an access token
 
-        await User.create({ userId, accessToken });
-        console.log(`Instance registered: ${userId} with access token: ${accessToken}`);
+        try {
+            await User.create({ userId, accessToken });
+            console.log(`Instance registered: ${userId} with access token: ${accessToken}`);
+        } catch (error) {
+            console.error('Error registering instance:', error);
+        }
     }
 
     async validateInstance(instance_id, access_token) {
         const user = await User.findOne({ where: { userId: instance_id, accessToken: access_token } });
-        return user !== null; // Retourne true si valide, sinon false
+        return user !== null;
     }
 
     // Send a text message to a single number
