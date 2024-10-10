@@ -3,10 +3,14 @@ const QRCode = require('qrcode');
 const User = require('../models/User');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 class WhatsappController {
     constructor() {
-        this.client = new Client();
+        this.client = new Client({
+            session: this.loadSession(), // Charger la session si elle existe
+        });
 
         // Handle QR code generation
         this.client.on('qr', (qr) => {
@@ -26,8 +30,26 @@ class WhatsappController {
             await this.registerInstance();
         });
 
+        // Save session on authentication
+        this.client.on('authenticated', (session) => {
+            this.saveSession(session);
+        });
+
         // Start the client
         this.client.initialize();
+    }
+
+    loadSession() {
+        const sessionPath = path.join(__dirname, '../session.json');
+        if (fs.existsSync(sessionPath)) {
+            return JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
+        }
+        return null; // Pas de session existante
+    }
+
+    saveSession(session) {
+        const sessionPath = path.join(__dirname, '../session.json');
+        fs.writeFileSync(sessionPath, JSON.stringify(session));
     }
 
     async registerInstance() {
