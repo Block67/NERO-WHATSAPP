@@ -3,15 +3,11 @@ const QRCode = require('qrcode');
 const User = require('../models/User');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
 
 class WhatsappController {
     constructor() {
-        // Initialize the client
-        this.client = new Client({
-            session: this.loadSession(), // Load the session if it exists
-        });
+        // Initialize the WhatsApp client without session
+        this.client = new Client();
 
         // Log when the client initializes
         console.log('WhatsApp client initializing...');
@@ -33,12 +29,13 @@ class WhatsappController {
         });
 
         // Client authenticated event
-        this.client.on('authenticated', (session) => {
+        this.client.on('authenticated', async () => {
             console.log('Client authenticated.');
-            this.saveSession(session);
 
             // Create the instance and generate access token after authentication
-            this.registerInstance();
+            const instanceDetails = await this.registerInstance();
+
+            console.log('Authenticated instance details:', instanceDetails);
         });
 
         // Handle authentication failure
@@ -64,41 +61,21 @@ class WhatsappController {
         });
     }
 
-    loadSession() {
-        const sessionPath = path.join(__dirname, '../session.json');
-        if (fs.existsSync(sessionPath)) {
-            console.log('Session file found, loading session...');
-            return JSON.parse(fs.readFileSync(sessionPath, 'utf8'));
-        }
-        console.log('No session file found.');
-        return null; // No existing session
-    }
-
-    saveSession(session) {
-        const sessionPath = path.join(__dirname, '../session.json');
-        console.log('Saving session at:', sessionPath); // Debugging path
-
-        try {
-            fs.writeFileSync(sessionPath, JSON.stringify(session));
-            console.log('Session saved successfully.');
-            
-            // Read the file immediately to verify
-            const savedSession = fs.readFileSync(sessionPath, 'utf8');
-            console.log('Session file content:', savedSession);
-        } catch (error) {
-            console.error('Error saving session:', error);
-        }
-    }
-
+    // Method to register an instance and return the userId and accessToken
     async registerInstance() {
-        const userId = `user_${uuidv4()}`; //Generate a unique user ID
-        const accessToken = crypto.randomBytes(32).toString('hex'); // Generate an access token
+        const userId = `user_${uuidv4()}`; // Generate a unique user ID
+        const accessToken = crypto.randomBytes(7).toString('hex'); // Generate an access token
 
         try {
+            // Register the instance in the database
             await User.create({ userId, accessToken });
             console.log(`Instance registered: ${userId} with access token: ${accessToken}`);
+            
+            // Return the instance details
+            return { userId, accessToken };
         } catch (error) {
             console.error('Error registering instance:', error);
+            throw error;
         }
     }
 
@@ -181,6 +158,21 @@ class WhatsappController {
         } catch (error) {
             console.error('Error sending media:', error);
             return res.status(500).json({ message: 'Error sending media.', error });
+        }
+    }
+
+    // Retrieve the instance details
+    async getInstanceDetails(req, res) {
+        try {
+            const user = await User.findOne({ order: [['createdAt', 'DESC']] });
+            if (user) {
+                return res.status(200).json({ userId: user.userId, accessToken: user.accessToken });
+            } else {
+                return res.status(404).json({ message: 'No instance found.' });
+            }
+        } catch (error) {
+            console.error('Error fetching instance details:', error);
+            return res.status(500).json({ message: 'Error fetching instance details.' });
         }
     }
 }

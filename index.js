@@ -19,9 +19,10 @@ const syncDatabase = async () => {
 syncDatabase();
 
 // Routes
-app.post('/send-text', (req, res) => WazapController.sendText(req, res));
-app.post('/send-bulk-text', (req, res) => WazapController.sendBulkText(req, res));
-app.post('/send-media', (req, res) => WazapController.sendMedia(req, res));
+app.post('/api/send-text', (req, res) => WazapController.sendText(req, res));
+app.post('/api/send-bulk-text', (req, res) => WazapController.sendBulkText(req, res));
+app.post('/api/send-media', (req, res) => WazapController.sendMedia(req, res));
+app.get('/api/instance-details', (req, res) => WazapController.getInstanceDetails(req, res));
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
