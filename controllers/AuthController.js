@@ -1,33 +1,39 @@
 const bcrypt = require('bcrypt');
-const { User } = require('../models/User');
+const User = require('../models/User');
 const crypto = require('crypto');
-const { sendEmail } = require('../services/emailService'); // Importer sendEmail
+const { sendEmail } = require('../services/emailService');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 class AuthController {
     // Inscription d'un nouvel utilisateur
     async register(req, res) {
-        const { firstName, lastName, whatsappNumber, email, password, passwordConfirmation } = req.body;
-
-        if (!firstName || !lastName || !whatsappNumber || !email || !password || !passwordConfirmation) {
+        const { firstName, lastName, whatsappNumber, email, password } = req.body;
+    
+        if (!firstName || !lastName || !whatsappNumber || !email || !password ) {
             return res.status(400).json({ message: 'Tous les champs sont requis.' });
         }
-
+    
         try {
-            if (password !== passwordConfirmation) {
-                return res.status(400).json({ message: 'Le mot de passe et la confirmation ne correspondent pas.' });
-            }
-
-            const hashedPassword = await bcrypt.hash(password, 10);
-            const user = await User.create({ firstName, lastName, whatsappNumber, email, password: hashedPassword });
-
+            const user = await User.create({ 
+                firstName, 
+                lastName, 
+                whatsappNumber, 
+                email, 
+                password
+            });
+    
+            // Hachage du mot de passe après la création de l'utilisateur
+            user.password = await bcrypt.hash(user.password, 10);
+            await user.save();
+    
             return res.status(201).json({ message: 'Utilisateur inscrit avec succès.', user });
         } catch (error) {
             console.error('Erreur lors de l\'inscription:', error);
             return res.status(500).json({ message: 'Erreur lors de l\'inscription.' });
         }
     }
+    
 
     // Connexion d'un utilisateur
     async login(req, res) {
@@ -50,9 +56,9 @@ class AuthController {
 
             // Générer un token JWT
             const token = jwt.sign(
-                { id: user.id, email: user.email }, // Payload
-                process.env.JWT_SECRET, // Remplacez par votre clé secrète
-                { expiresIn: '1h' } // Durée de validité du token
+                { id: user.id, email: user.email }, 
+                process.env.JWT_SECRET,
+                { expiresIn: '1h' }
             );
 
             return res.status(200).json({ message: 'Connexion réussie.', token });

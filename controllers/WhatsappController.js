@@ -1,7 +1,7 @@
 const { Client, MessageMedia } = require('whatsapp-web.js');
 const QRCode = require('qrcode');
-const WhatsappSession = require('../models/WhatsappSession'); // Importer le modèle WhatsappSession
-const User = require('../models/User'); // Importer le modèle User pour vérifier l'utilisateur
+const WhatsappSession = require('../models/WhatsappSession');
+const User = require('../models/User');
 const crypto = require('crypto');
 
 class WhatsappController {
@@ -48,9 +48,9 @@ class WhatsappController {
     async validateInstance(instance_id, access_token) {
         const session = await WhatsappSession.findOne({
             where: { instanceId: instance_id, accessToken: access_token },
-            include: User // Inclure l'utilisateur pour vérification
+            include: User 
         });
-        return session !== null; // Retourne true si valide, sinon false
+        return session !== null; 
     }
 
     // Send a text message to a single number

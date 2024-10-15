@@ -32,19 +32,9 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    passwordConfirmation: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
 }, {
-    hooks: {
-        beforeCreate: (user, options) => {
-
-            if (user.password !== user.passwordConfirmation) {
-                throw new Error('Password and password confirmation do not match.');
-            }
-        },
-    },
 });
+
+
 
 module.exports = User;
