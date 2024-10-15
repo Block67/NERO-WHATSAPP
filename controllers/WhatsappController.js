@@ -37,12 +37,12 @@ class WhatsappController {
             });
         });
 
-        const accessToken = crypto.randomBytes(32).toString('hex'); // Générer le token
-        const instanceId = this.client.info.wid; // Utiliser l'ID de l'instance pour WhatsApp
+        const accessToken = crypto.randomBytes(32).toString('hex');
+        const instanceId = this.client.info.wid; 
 
         // Créer ou mettre à jour la session pour cet utilisateur
         await WhatsappSession.upsert({ userId, instanceId, accessToken });
-        console.log(`Instance registered for user: ${userId} with access token: ${accessToken}`);
+        console.log(`Instance registered for user: ${userId} instance : ${instanceId}  with access token: ${accessToken}`);
     }
 
     async validateInstance(instance_id, access_token) {

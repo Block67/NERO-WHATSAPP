@@ -23,6 +23,7 @@ const syncDatabase = async () => {
 
 syncDatabase();
 
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 

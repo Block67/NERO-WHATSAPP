@@ -3,12 +3,17 @@ const { sequelize } = require('../db/db');
 const User = require('../models/User');
 
 const WhatsappSession = sequelize.define('WhatsappSession', {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,     
+        primaryKey: true,      
+    },
     userId: {
-        type: DataTypes.STRING,
-        primaryKey: true,
+        type: DataTypes.INTEGER, 
+        allowNull: false,
         references: {
-            model: User,
-            key: 'id',
+            model: User,          
+            key: 'id', 
         },
     },
     instanceId: {
@@ -21,6 +26,7 @@ const WhatsappSession = sequelize.define('WhatsappSession', {
     },
 });
 
+// Définir la relation
 WhatsappSession.belongsTo(User, { foreignKey: 'userId', targetKey: 'id' });
 
 module.exports = WhatsappSession;
