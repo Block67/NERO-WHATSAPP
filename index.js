@@ -1,8 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { connectDB } = require('./db/db');
-const WazapController = require('./controller/WhatsappController');
 const User = require('./models/User');
+const WhatsappSession = require('./models/WhatsappSession');
+const AuthController = require('./controllers/AuthController');
+const WhatsappController = require('./controllers/WhatsappController');
+const authRoutes = require('./routes/authRoutes');
+const whatsappRoutes = require('./routes/whatsappRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,16 +17,15 @@ app.use(bodyParser.json());
 const syncDatabase = async () => {
     await connectDB();
     await User.sync();
+    await WhatsappSession.sync();
     console.log('Database synchronized');
 };
 
 syncDatabase();
 
-// Routes
-app.post('/send-text', (req, res) => WazapController.sendText(req, res));
-app.post('/send-bulk-text', (req, res) => WazapController.sendBulkText(req, res));
-app.post('/send-media', (req, res) => WazapController.sendMedia(req, res));
+app.use('/api/auth', authRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
-app.listen(PORT, () => {
+app.listen(PORT, () => { 
     console.log(`Server is running on http://localhost:${PORT}`);
 });
