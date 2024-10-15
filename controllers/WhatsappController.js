@@ -14,17 +14,6 @@ class WhatsappController {
             // Appel à une méthode pour gérer l'instance après authentification si besoin
         });
 
-        // Start the client
-        this.client.initialize();
-    }
-
-    async registerInstance(userId) {
-        // Vérifier si l'utilisateur existe
-        const user = await User.findByPk(userId);
-        if (!user) {
-            throw new Error('User not found.');
-        }
-
         // Gérer la génération du QR code ici
         this.client.on('qr', (qr) => {
             QRCode.toDataURL(qr, (err, url) => {
@@ -37,12 +26,24 @@ class WhatsappController {
             });
         });
 
-        const accessToken = crypto.randomBytes(32).toString('hex');
-        const instanceId = this.client.info.wid; 
+        // Start the client
+        this.client.initialize();
+    }
 
+    async registerInstance(userId) {
+        // Vérifier si l'utilisateur existe
+        const user = await User.findByPk(userId);
+        if (!user) {
+            throw new Error('User not found.');
+        }
+
+        // Générer un instanceId aléatoire
+        const instanceId = crypto.randomBytes(16).toString('hex'); // Générer un ID aléatoire de 32 caractères
+        const accessToken = crypto.randomBytes(32).toString('hex');
+        
         // Créer ou mettre à jour la session pour cet utilisateur
         await WhatsappSession.upsert({ userId, instanceId, accessToken });
-        console.log(`Instance registered for user: ${userId} instance : ${instanceId}  with access token: ${accessToken}`);
+        console.log(`Instance registered for user: ${userId} with instanceId: ${instanceId} and access token: ${accessToken}`);
     }
 
     async validateInstance(instance_id, access_token) {
