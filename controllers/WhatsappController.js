@@ -6,15 +6,37 @@ const crypto = require('crypto');
 
 class WhatsappController {
     constructor() {
+        this.client = null;  
+
+        // Liaison des méthodes au contexte de l'instance
+        this.registerInstance = this.registerInstance.bind(this);
+        this.sendText = this.sendText.bind(this);
+        this.sendBulkText = this.sendBulkText.bind(this);
+        this.sendMedia = this.sendMedia.bind(this);
+    }
+
+    async registerInstance(userId) {
+        // Vérifier si l'utilisateur existe
+        const user = await User.findByPk(userId);
+        if (!user) {
+            throw new Error('User not found.');
+        }
+
+        const instanceId = crypto.randomBytes(10).toString('hex');
+        const accessToken = crypto.randomBytes(10).toString('hex');
+        
+        // Créer ou mettre à jour la session pour cet utilisateur
+        await WhatsappSession.upsert({ userId, instanceId, accessToken });
+        console.log(`Instance registered for user: ${userId} with instanceId: ${instanceId} and access token: ${accessToken}`);
+
+        // Initialiser le client WhatsApp après avoir enregistré l'instance
         this.client = new Client();
 
-        // Handle successful authentication
         this.client.on('ready', async () => {
             console.log('WhatsApp client is ready!');
-            // Appel à une méthode pour gérer l'instance après authentification si besoin
         });
 
-        // Gérer la génération du QR code ici
+        // Génération du qr code
         this.client.on('qr', (qr) => {
             QRCode.toDataURL(qr, (err, url) => {
                 if (err) {
@@ -26,24 +48,8 @@ class WhatsappController {
             });
         });
 
-        // Start the client
+        // Initialiser le client après l'enregistrement de l'instance
         this.client.initialize();
-    }
-
-    async registerInstance(userId) {
-        // Vérifier si l'utilisateur existe
-        const user = await User.findByPk(userId);
-        if (!user) {
-            throw new Error('User not found.');
-        }
-
-        // Générer un instanceId aléatoire
-        const instanceId = crypto.randomBytes(16).toString('hex'); // Générer un ID aléatoire de 32 caractères
-        const accessToken = crypto.randomBytes(32).toString('hex');
-        
-        // Créer ou mettre à jour la session pour cet utilisateur
-        await WhatsappSession.upsert({ userId, instanceId, accessToken });
-        console.log(`Instance registered for user: ${userId} with instanceId: ${instanceId} and access token: ${accessToken}`);
     }
 
     async validateInstance(instance_id, access_token) {
@@ -55,21 +61,23 @@ class WhatsappController {
     }
 
     // Send a text message to a single number
-    async sendText(req, res) {
-        const { userId, to, message } = req.body;
+    sendText = async (req, res) => {
+        const { instance_id, access_token, to, message } = req.body;
 
-        if (!userId || !to || !message) {
-            return res.status(400).json({ message: 'User ID, recipient, and message are required.' });
+        if (!instance_id || !access_token || !to || !message) {
+            return res.status(400).json({ message: 'Instance ID, access token, recipient, and message are required.' });
         }
 
         const formattedTo = `${to}@c.us`;
 
         try {
-            const session = await WhatsappSession.findOne({ where: { userId } });
-            if (!session) {
-                return res.status(403).json({ message: 'Session not found for this user.' });
+            // Valider la session avec instance_id et access_token
+            const isValidSession = await this.validateInstance(instance_id, access_token);
+            if (!isValidSession) {
+                return res.status(403).json({ message: 'Invalid session credentials.' });
             }
 
+            // Envoyer le message via le client WhatsApp
             const response = await this.client.sendMessage(formattedTo, message);
             return res.status(200).json({ message: 'Message sent successfully!', response });
         } catch (error) {
@@ -79,19 +87,21 @@ class WhatsappController {
     }
 
     // Send a text message to multiple numbers
-    async sendBulkText(req, res) {
-        const { userId, numbers, message } = req.body;
+    sendBulkText = async (req, res) => {
+        const { instance_id, access_token, numbers, message } = req.body;
 
-        if (!userId || !Array.isArray(numbers) || !message) {
-            return res.status(400).json({ message: 'User ID, numbers (array), and message are required.' });
+        if (!instance_id || !access_token || !Array.isArray(numbers) || !message) {
+            return res.status(400).json({ message: 'Instance ID, access token, numbers (array), and message are required.' });
         }
 
         try {
-            const session = await WhatsappSession.findOne({ where: { userId } });
-            if (!session) {
-                return res.status(403).json({ message: 'Session not found for this user.' });
+            // Valider la session avec instance_id et access_token
+            const isValidSession = await this.validateInstance(instance_id, access_token);
+            if (!isValidSession) {
+                return res.status(403).json({ message: 'Invalid session credentials.' });
             }
 
+            // Envoyer les messages
             const results = [];
             for (const number of numbers) {
                 const formattedNumber = `${number}@c.us`;
@@ -110,19 +120,20 @@ class WhatsappController {
     }
 
     // Send a media file
-    async sendMedia(req, res) {
-        const { userId, to, mediaUrl, caption } = req.body;
+    sendMedia = async (req, res) => {
+        const { instance_id, access_token, to, mediaUrl, caption } = req.body;
 
-        if (!userId || !to || !mediaUrl) {
-            return res.status(400).json({ message: 'User ID, recipient, and media URL are required.' });
+        if (!instance_id || !access_token || !to || !mediaUrl) {
+            return res.status(400).json({ message: 'Instance ID, access token, recipient, and media URL are required.' });
         }
 
         const formattedTo = `${to}@c.us`;
 
         try {
-            const session = await WhatsappSession.findOne({ where: { userId } });
-            if (!session) {
-                return res.status(403).json({ message: 'Session not found for this user.' });
+            // Valider la session avec instance_id et access_token
+            const isValidSession = await this.validateInstance(instance_id, access_token);
+            if (!isValidSession) {
+                return res.status(403).json({ message: 'Invalid session credentials.' });
             }
 
             const media = await MessageMedia.fromUrl(mediaUrl);

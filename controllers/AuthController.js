@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 class AuthController {
-    // Inscription d'un nouvel utilisateur
+
     async register(req, res) {
         const { firstName, lastName, whatsappNumber, email, password } = req.body;
     
@@ -22,8 +22,7 @@ class AuthController {
                 email, 
                 password
             });
-    
-            // Hachage du mot de passe après la création de l'utilisateur
+
             user.password = await bcrypt.hash(user.password, 10);
             await user.save();
     
@@ -35,7 +34,6 @@ class AuthController {
     }
     
 
-    // Connexion d'un utilisateur
     async login(req, res) {
         const { email, password } = req.body;
 
@@ -54,7 +52,6 @@ class AuthController {
                 return res.status(401).json({ message: 'Email ou mot de passe incorrect.' });
             }
 
-            // Générer un token JWT
             const token = jwt.sign(
                 { id: user.id, email: user.email }, 
                 process.env.JWT_SECRET,
@@ -68,7 +65,7 @@ class AuthController {
         }
     }
 
-    // Changement de mot de passe
+
     async changePassword(req, res) {
         const { userId, oldPassword, newPassword, newPasswordConfirmation } = req.body;
 
@@ -101,7 +98,7 @@ class AuthController {
         }
     }
 
-    // Réinitialisation de mot de passe
+
     async resetPassword(req, res) {
         const { email } = req.body;
 
@@ -115,10 +112,10 @@ class AuthController {
                 return res.status(404).json({ message: 'Utilisateur non trouvé.' });
             }
 
-            // Générer un token de réinitialisation
+
             const resetToken = crypto.randomBytes(20).toString('hex');
-            user.resetToken = resetToken; // Vous devrez ajouter ce champ dans votre modèle User
-            user.resetTokenExpiry = Date.now() + 3600000; // Token valide pendant 1 heure
+            user.resetToken = resetToken;
+            user.resetTokenExpiry = Date.now() + 3600000;
             await user.save();
 
             const resetLink = `http://yourwebsite.com/reset-password?token=${resetToken}`;
@@ -131,7 +128,7 @@ class AuthController {
         }
     }
 
-    // Méthode pour gérer la réinitialisation effective du mot de passe
+
     async confirmResetPassword(req, res) {
         const { token, newPassword, newPasswordConfirmation } = req.body;
 
@@ -150,8 +147,8 @@ class AuthController {
             }
 
             user.password = await bcrypt.hash(newPassword, 10);
-            user.resetToken = null; // Réinitialiser le token
-            user.resetTokenExpiry = null; // Réinitialiser l'expiration
+            user.resetToken = null;
+            user.resetTokenExpiry = null;
             await user.save();
 
             return res.status(200).json({ message: 'Mot de passe réinitialisé avec succès.' });
