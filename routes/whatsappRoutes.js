@@ -1,9 +1,9 @@
-// whatsappRoutes.js
 const express = require('express');
 const WhatsappController = require('../controllers/WhatsappController');
 
 const router = express.Router();
 
+// Route pour enregistrer une instance
 router.post('/register-instance', async (req, res) => {
     const { userId } = req.body;
     try {
@@ -18,5 +18,9 @@ router.post('/register-instance', async (req, res) => {
 router.post('/send-text', WhatsappController.sendText);
 router.post('/send-bulk-text', WhatsappController.sendBulkText);
 router.post('/send-media', WhatsappController.sendMedia);
+router.post('/get-user-profile', WhatsappController.getUserProfile)
+router.post('/send-template-message', WhatsappController.sendTemplateMessage);
+router.post('/schedule-message', WhatsappController.scheduleMessage);
+router.post('/send-location', WhatsappController.sendLocation);
 
 module.exports = router;

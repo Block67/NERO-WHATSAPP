@@ -13,6 +13,10 @@ class WhatsappController {
         this.sendText = this.sendText.bind(this);
         this.sendBulkText = this.sendBulkText.bind(this);
         this.sendMedia = this.sendMedia.bind(this);
+        this.getUserProfile = this.getUserProfile.bind(this);
+        this.sendTemplateMessage = this.sendTemplateMessage.bind(this);
+        this.scheduleMessage = this.scheduleMessage.bind(this);
+        this.sendLocation = this.sendLocation.bind(this);
     }
 
     async registerInstance(userId) {
@@ -142,6 +146,110 @@ class WhatsappController {
         } catch (error) {
             console.error('Error sending media:', error);
             return res.status(500).json({ message: 'Error sending media.', error });
+        }
+    }
+
+    // Get user profile information
+    getUserProfile = async (req, res) => {
+        const { instance_id, access_token, to } = req.body;
+
+        if (!instance_id || !access_token || !to) {
+            return res.status(400).json({ message: 'Instance ID, access token, and recipient are required.' });
+        }
+
+        const formattedTo = `${to}@c.us`;
+
+        try {
+            // Valider la session avec instance_id et access_token
+            const isValidSession = await this.validateInstance(instance_id, access_token);
+            if (!isValidSession) {
+                return res.status(403).json({ message: 'Invalid session credentials.' });
+            }
+
+            const profile = await this.client.getContactById(formattedTo);
+            return res.status(200).json({ message: 'User profile retrieved successfully!', profile });
+        } catch (error) {
+            console.error('Error getting user profile:', error);
+            return res.status(500).json({ message: 'Error getting user profile.', error });
+        }
+    }
+
+    // Send a template message
+    sendTemplateMessage = async (req, res) => {
+        const { instance_id, access_token, to, templateName, templateParams } = req.body;
+
+        if (!instance_id || !access_token || !to || !templateName) {
+            return res.status(400).json({ message: 'Instance ID, access token, recipient, template name, and parameters are required.' });
+        }
+
+        const formattedTo = `${to}@c.us`;
+        const message = `Template: ${templateName} - Params: ${JSON.stringify(templateParams)}`;
+
+        try {
+            const response = await this.client.sendMessage(formattedTo, message);
+            return res.status(200).json({ message: 'Template message sent successfully!', response });
+        } catch (error) {
+            console.error('Error sending template message:', error);
+            return res.status(500).json({ message: 'Error sending template message.', error });
+        }
+    }
+
+    // Schedule a message to be sent later
+    scheduleMessage = async (req, res) => {
+        const { instance_id, access_token, to, message, scheduleTime } = req.body;
+
+        if (!instance_id || !access_token || !to || !message || !scheduleTime) {
+            return res.status(400).json({ message: 'Instance ID, access token, recipient, message, and schedule time are required.' });
+        }
+
+        const formattedTo = `${to}@c.us`;
+        const delay = new Date(scheduleTime).getTime() - Date.now();
+
+        if (delay < 0) {
+            return res.status(400).json({ message: 'Scheduled time must be in the future.' });
+        }
+
+        setTimeout(async () => {
+            try {
+                await this.client.sendMessage(formattedTo, message);
+                console.log('Scheduled message sent!');
+            } catch (error) {
+                console.error('Error sending scheduled message:', error);
+            }
+        }, delay);
+
+        return res.status(200).json({ message: 'Message scheduled successfully!' });
+    }
+
+    // Send a location
+    sendLocation = async (req, res) => {
+        const { instance_id, access_token, to, latitude, longitude, title, description } = req.body;
+
+        if (!instance_id || !access_token || !to || !latitude || !longitude) {
+            return res.status(400).json({ message: 'Instance ID, access token, recipient, latitude, and longitude are required.' });
+        }
+
+        const formattedTo = `${to}@c.us`;
+
+        try {
+            // Valider la session avec instance_id et access_token
+            const isValidSession = await this.validateInstance(instance_id, access_token);
+            if (!isValidSession) {
+                return res.status(403).json({ message: 'Invalid session credentials.' });
+            }
+
+            const locationMessage = {
+                latitude,
+                longitude,
+                title,
+                description,
+            };
+
+            await this.client.sendMessage(formattedTo, locationMessage);
+            return res.status(200).json({ message: 'Location sent successfully!' });
+        } catch (error) {
+            console.error('Error sending location:', error);
+            return res.status(500).json({ message: 'Error sending location.', error });
         }
     }
 }
