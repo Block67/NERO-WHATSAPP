@@ -7,6 +7,9 @@ const crypto = require('crypto');
 class WhatsappController {
     constructor() {
         this.client = null;  
+        this.currentQrCode = null; 
+        this.instanceId = null;
+        this.accessToken = null;
 
         // Liaison des méthodes au contexte de l'instance
         this.registerInstance = this.registerInstance.bind(this);
@@ -14,15 +17,16 @@ class WhatsappController {
         this.sendBulkText = this.sendBulkText.bind(this);
         this.sendMedia = this.sendMedia.bind(this);
         this.getUserProfile = this.getUserProfile.bind(this);
+        this.getQRCode = this.getQRCode.bind(this);
     }
 
     async registerInstance(userId) {
-        // Vérifier si l'utilisateur existe
+
         const user = await User.findByPk(userId);
         if (!user) {
             throw new Error('User not found.');
         }
-
+    
         const instanceId = crypto.randomBytes(10).toString('hex');
         const accessToken = crypto.randomBytes(10).toString('hex');
         
@@ -30,27 +34,42 @@ class WhatsappController {
         await WhatsappSession.upsert({ userId, instanceId, accessToken });
         console.log(`Instance registered for user: ${userId} with instanceId: ${instanceId} and access token: ${accessToken}`);
 
-        // Initialiser le client WhatsApp après avoir enregistré l'instance
-        this.client = new Client();
+        this.instanceId = instanceId;
+        this.accessToken = accessToken;
 
+        this.client = new Client();
+    
         this.client.on('ready', async () => {
             console.log('WhatsApp client is ready!');
         });
-
-        // Génération du qr code
+    
+        // Génération du QR code
         this.client.on('qr', (qr) => {
             QRCode.toDataURL(qr, (err, url) => {
                 if (err) {
                     console.error('Error generating QR code:', err);
                 } else {
                     console.log('QR Code generated:', url);
-                    // Envoie l'URL du QR code ici si nécessaire
+                    this.currentQrCode = url;
                 }
             });
         });
+    
+        await this.client.initialize();
+        return { instanceId, accessToken };
+    }
 
-        // Initialiser le client après l'enregistrement de l'instance
-        this.client.initialize();
+
+
+    getQRCode(req, res) {
+        if (!this.currentQrCode) {
+            return res.status(404).json({ message: 'QR code not available.' });
+        }
+        return res.status(200).json({ 
+            qrCode: this.currentQrCode,
+            instanceId: this.instanceId,
+            accessToken: this.accessToken
+        });
     }
 
     async validateInstance(instance_id, access_token) {
@@ -170,7 +189,6 @@ class WhatsappController {
             return res.status(500).json({ message: 'Error getting user profile.', error });
         }
     }
-
 }
 
 module.exports = new WhatsappController();

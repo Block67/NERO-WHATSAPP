@@ -30,18 +30,94 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: Instance registered successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Message de succès.
+ *                 instanceId:
+ *                   type: string
+ *                   description: ID de l'instance enregistrée.
+ *                 accessToken:
+ *                   type: string
+ *                   description: Token d'accès de l'instance.
  *       500:
  *         description: Error registering instance.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Message d'erreur.
+ *                 error:
+ *                   type: string
+ *                   description: Détails de l'erreur.
  */
 router.post('/register-instance', async (req, res) => {
     const { userId } = req.body;
     try {
-        await WhatsappController.registerInstance(userId);
-        res.status(200).json({ message: 'Instance registered successfully.' });
+        const { instanceId, accessToken } = await WhatsappController.registerInstance(userId);
+        res.status(200).json({
+            message: 'Instance registered successfully.',
+            instanceId,
+            accessToken
+        });
     } catch (error) {
         res.status(500).json({ message: 'Error registering instance.', error: error.message });
     }
 });
+
+
+/**
+ * @swagger
+ * /api/whatsapp/get-qr-code:
+ *   get:
+ *     tags: [WhatsApp]
+ *     summary: Obtenir le QR code actuel
+ *     description: Récupère le QR code actuel de l'instance WhatsApp.
+ *     responses:
+ *       200:
+ *         description: QR code retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 qrCode:
+ *                   type: string
+ *                   description: QR code actuel.
+ *                 instanceId:
+ *                   type: string
+ *                   description: ID de l'instance WhatsApp.
+ *                 accessToken:
+ *                   type: string
+ *                   description: Token d'accès pour l'instance.
+ *         examples:
+ *           application/json:
+ *             value: 
+ *               qrCode: "data:image/png;base64,iVBORw0K..."
+ *               instanceId: "12345"
+ *               accessToken: "abcdef"
+ *       404:
+ *         description: QR code not available.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Message d'erreur.
+ *     notes:
+ *       - NB: Le QR code expire après environ 20 secondes si il n'est pas scanné. Un nouveau QR code sera automatiquement généré après expiration.
+ */
+router.get('/get-qr-code', WhatsappController.getQRCode);
+
 
 /**
  * @swagger
