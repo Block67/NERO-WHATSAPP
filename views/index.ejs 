@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription</title>
+    <link rel="stylesheet" href="/path-to-your-css-file.css">
+</head>
+<body>
+    <h1>Inscription</h1>
+
+    <% if (typeof error !== 'undefined') { %>
+        <p style="color: red;"><%= error %></p>
+    <% } %>
+
+    <form action="/register" method="POST">
+        <div>
+            <label for="firstName">Prénom :</label>
+            <input type="text" name="firstName" id="firstName" required>
+        </div>
+        <div>
+            <label for="lastName">Nom :</label>
+            <input type="text" name="lastName" id="lastName" required>
+        </div>
+        <div>
+            <label for="whatsappNumber">Numéro WhatsApp :</label>
+            <input type="text" name="whatsappNumber" id="whatsappNumber" required>
+        </div>
+        <div>
+            <label for="email">Email :</label>
+            <input type="email" name="email" id="email" required>
+        </div>
+        <div>
+            <label for="password">Mot de passe :</label>
+            <input type="password" name="password" id="password" required>
+        </div>
+        <div>
+            <label for="confirmPassword">Confirmer le mot de passe :</label>
+            <input type="password" name="confirmPassword" id="confirmPassword" required>
+        </div>
+        <button type="submit">S'inscrire</button>
+    </form>
+</body>
+</html>
